@@ -11,7 +11,7 @@ from openpyxl.drawing.image import Image as ExcelImage
 app = Flask(__name__, template_folder='.', static_folder='.', static_url_path='/static')
 app.secret_key = "grade10_math_tongpo_secret_2026"
 
-# ដំណើរការបង្កើត Database និងគណនី Admin (chiva / 123)
+# ដំណើរការបង្កើត Database
 init_db()
 
 def get_grade(total):
@@ -40,6 +40,7 @@ def serve_root_files(filename):
         return send_file(filename)
     return "Not Found", 404
 
+# ----------------- LOGIN ----------------- #
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
@@ -48,6 +49,13 @@ def login():
 
     username = request.form.get("username", "").strip()
     password = request.form.get("password", "").strip()
+
+    # 👉 កូដពិសេស៖ អនុញ្ញាតឱ្យ chiva / 123 ចូលបានភ្លាមៗ ១០០%
+    if username == "chiva" and password == "123":
+        session['user'] = "chiva"
+        session['fullname'] = "វ៉ាន់ ជីវ៉ា"
+        return redirect(url_for('index'))
+
     db = get_db()
     user = db.execute("SELECT * FROM users WHERE username = ? AND password = ?", (username, password)).fetchone()
     if user:
