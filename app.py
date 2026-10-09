@@ -10,7 +10,10 @@ from openpyxl.drawing.image import Image as ExcelImage
 # កំណត់ឱ្យ Flask ស្គាល់ HTML និង Static Files ដែលនៅខាងក្រៅ Folder
 app = Flask(__name__, template_folder='.', static_folder='.', static_url_path='/static')
 app.secret_key = "grade10_math_tongpo_secret_2026"
+app = Flask(__name__, template_folder='.', static_folder='.', static_url_path='/static')
+app.secret_key = "grade10_math_tongpo_secret_2026"
 
+init_db()  # <--- បន្ថែមបន្ទាត់មួយនេះចូល!
 def get_grade(total):
     if total >= 95: return "A"
     if total >= 90: return "B"
