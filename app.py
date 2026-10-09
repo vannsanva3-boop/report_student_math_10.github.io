@@ -7,7 +7,8 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.drawing.image import Image as ExcelImage
 
-app = Flask(__name__)
+# កំណត់ឱ្យ Flask ស្គាល់ HTML និង Static Files ដែលនៅខាងក្រៅ Folder
+app = Flask(__name__, template_folder='.', static_folder='.', static_url_path='/static')
 app.secret_key = "grade10_math_tongpo_secret_2026"
 
 def get_grade(total):
@@ -20,12 +21,23 @@ def get_grade(total):
 
 @app.before_request
 def check_auth():
-    if request.path.startswith('/static') or request.path in ['/login']:
+    # អនុញ្ញាតឱ្យទាញយករូបភាព js css និងទំព័រ login ដោយមិនបាច់ login សិន
+    if (request.path.startswith('/static') or 
+        request.path in ['/login'] or 
+        request.path.endswith(('.png', '.jpg', '.jpeg', '.js', '.css', '.ico'))):
         return None
+        
     if 'user' not in session:
         if request.path.startswith('/api/'):
             return jsonify({"error": "Unauthorized"}), 401
         return redirect(url_for('login'))
+
+# បន្ថែម Route នេះដើម្បីឱ្យ Browser ស្គាល់ file main.js និងរូបភាពដែលនៅខាងក្រៅ
+@app.route('/<filename>')
+def serve_root_files(filename):
+    if os.path.exists(filename):
+        return send_file(filename)
+    return "Not Found", 404
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -201,7 +213,6 @@ def export_real_excel():
     font_title_khmer = Font(name="Khmer OS Muol Light", size=11, bold=True, color="000000")
     font_red_bold = Font(name="Khmer OS Siemreap", size=10, bold=True, color="FF0000")
     
-    # Font Battambang សម្រាប់ឈ្មោះសិស្ស
     font_battambang_student = Font(name="Battambang", size=10, bold=True, color="000000")
 
     fill_orange_header = PatternFill(start_color="C55A11", end_color="C55A11", fill_type="solid")
@@ -217,7 +228,7 @@ def export_real_excel():
         bottom=Side(style='thin', color='7F7F7F')
     )
 
-    logo_path = os.path.join("static", "logo.png")
+    logo_path = "logo.png" if os.path.exists("logo.png") else os.path.join("static", "logo.png")
     if os.path.exists(logo_path):
         try:
             img = ExcelImage(logo_path)
@@ -237,8 +248,7 @@ def export_real_excel():
     ws['E2'].font = font_title_khmer
     ws['E2'].alignment = Alignment(horizontal='center', vertical='center')
 
-    # បញ្ចូលរូបក្បាច់គម្ពីរក្នុង Excel (Cell F3)
-    divider_path = os.path.join("static", "divider.png")
+    divider_path = "divider.png" if os.path.exists("divider.png") else os.path.join("static", "divider.png")
     if os.path.exists(divider_path):
         try:
             d_img = ExcelImage(divider_path)
@@ -264,7 +274,6 @@ def export_real_excel():
     ws['E8'].font = Font(name="Khmer OS Siemreap", size=10, bold=True, color="002060", underline="single")
     ws['E8'].alignment = Alignment(horizontal='center', vertical='center')
 
-    # Merge Row 9: ផ្នែកខាងឆ្វេង B9:D9 គឺ «របាយការណ៍ពិន្ទុគិតជា %»
     ws.merge_cells('B9:D9')
     ws['B9'] = "របាយការណ៍ពិន្ទុគិតជា %"
     for col_idx in range(2, 5):
@@ -325,90 +334,9 @@ def export_real_excel():
 
         ws.cell(row=current_row, column=2, value=idx + 1).alignment = Alignment(horizontal='center')
         
-        # ឈ្មោះសិស្សប្រើ Font Battambang
         name_cell = ws.cell(row=current_row, column=3, value=s["name"])
         name_cell.alignment = Alignment(horizontal='left')
         name_cell.font = font_battambang_student
 
         gender_cell = ws.cell(row=current_row, column=4, value=s["gender"])
-        gender_cell.alignment = Alignment(horizontal='center')
-        gender_cell.font = font_bold
-
-        ws.cell(row=current_row, column=5, value=s["behavior"]).alignment = Alignment(horizontal='center')
-        ws.cell(row=current_row, column=6, value=s["attendance"]).alignment = Alignment(horizontal='center')
-        ws.cell(row=current_row, column=7, value=s["homework"]).alignment = Alignment(horizontal='center')
-        ws.cell(row=current_row, column=8, value=s["worksheet"]).alignment = Alignment(horizontal='center')
-        ws.cell(row=current_row, column=9, value=s["quiz"]).alignment = Alignment(horizontal='center')
-
-        ws.cell(row=current_row, column=10, value=int(tot) if tot.is_integer() else tot).font = font_red_bold
-        ws.cell(row=current_row, column=11, value=f"{avg:.2f}").font = font_red_bold
-        ws.cell(row=current_row, column=12, value=idx + 1).font = font_red_bold
-        ws.cell(row=current_row, column=13, value=res).font = font_red_bold
-        ws.cell(row=current_row, column=14, value=g).font = font_red_bold
-
-        for col_idx in range(2, 15):
-            c_cell = ws.cell(row=current_row, column=col_idx)
-            c_cell.border = thin_border
-            if col_idx in [10, 11, 12, 13, 14]:
-                c_cell.alignment = Alignment(horizontal='center')
-            elif col_idx not in [3, 4]:
-                c_cell.font = font_khmer
-
-        current_row += 1
-
-    stat_start_row = current_row + 1
-    ws.merge_cells(start_row=stat_start_row, start_column=2, end_row=stat_start_row+2, end_column=2)
-    stat_label = ws.cell(row=stat_start_row, column=2, value="គិតជាភេទ")
-    stat_label.fill = fill_orange_header
-    stat_label.font = Font(name="Khmer OS Siemreap", size=10, bold=True, color="FFFFFF")
-    stat_label.alignment = Alignment(horizontal='center', vertical='center', text_rotation=90)
-
-    ws.cell(row=stat_start_row, column=3, value="សិស្សសរុបចំនួន").fill = fill_stat_orange
-    ws.cell(row=stat_start_row, column=3).font = Font(name="Khmer OS Siemreap", size=10, bold=True, color="FFFFFF")
-    ws.cell(row=stat_start_row, column=4, value=len(students)).alignment = Alignment(horizontal='center')
-    ws.cell(row=stat_start_row, column=5, value="នាក់").alignment = Alignment(horizontal='center')
-
-    female_cnt = sum(1 for s in students if s["gender"] == "ស្រី")
-    ws.cell(row=stat_start_row+1, column=3, value="ស្រី ").fill = fill_stat_green
-    ws.cell(row=stat_start_row+1, column=3).font = Font(name="Khmer OS Siemreap", size=10, bold=True, color="FFFFFF")
-    ws.cell(row=stat_start_row+1, column=4, value=female_cnt).alignment = Alignment(horizontal='center')
-    ws.cell(row=stat_start_row+1, column=5, value="នាក់").alignment = Alignment(horizontal='center')
-
-    male_cnt = sum(1 for s in students if s["gender"] == "ប្រុស")
-    ws.cell(row=stat_start_row+2, column=3, value="ប្រុស").fill = fill_stat_blue
-    ws.cell(row=stat_start_row+2, column=3).font = Font(name="Khmer OS Siemreap", size=10, bold=True, color="FFFFFF")
-    ws.cell(row=stat_start_row+2, column=4, value=male_cnt).alignment = Alignment(horizontal='center')
-    ws.cell(row=stat_start_row+2, column=5, value="នាក់").alignment = Alignment(horizontal='center')
-
-    for r in range(stat_start_row, stat_start_row+3):
-        for c in range(2, 6):
-            ws.cell(row=r, column=c).border = thin_border
-
-    lunar_date = settings['admin_lunar_date'] if settings else "ថ្ងៃ  ពុធ ៤រោច ខែ  ភទ្របទ  ឆ្នាំ  មមី  អដ្ឋសក័ ព.ស.២៥៧០"
-    solar_date = settings['admin_solar_date'] if settings else "ភ្នំពេញ ត្រូវនឹងថ្ងៃទី  ៣០ ខែ  កញ្ញា  ឆ្នាំ២០២៦"
-    t_date = settings['teacher_date'] if settings else "ថ្ងៃទី ៣០ ខែ កញ្ញា ឆ្នាំ២០២៦"
-    t_name = settings['teacher_name'] if settings else "វ៉ាន់ ជីវ៉ា"
-
-    ws.cell(row=stat_start_row, column=7, value=lunar_date).font = font_bold
-    ws.cell(row=stat_start_row+1, column=8, value=solar_date).font = font_bold
-    ws.cell(row=stat_start_row+2, column=9, value="បានឃើញ និងឯកភាព").font = font_bold
-    ws.cell(row=stat_start_row+3, column=9, value="គណ:គ្រប់គ្រងសាខា ស្វាយប៉ាក").font = font_bold
-
-    ws.cell(row=stat_start_row+4, column=3, value=t_date).font = font_bold
-    ws.cell(row=stat_start_row+5, column=3, value="គ្រូទទួលបន្ទុកថ្នាក់").font = font_bold
-    ws.cell(row=stat_start_row+7, column=3, value=t_name).font = Font(name="Battambang", size=11, bold=True, underline="single", color="000000")
-
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-
-    return send_file(
-        output,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        as_attachment=True,
-        download_name="របាយ៍ការណ៍_លទ្ធផលប្រចាំខែ_.xlsx"
-    )
-
-if __name__ == "__main__":
-    init_db()
-    app.run(debug=True, port=5000)
+        gender_cell.alignment = Align
