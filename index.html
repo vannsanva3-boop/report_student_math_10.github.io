@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>របាយការណ៍លទ្ធផលប្រឡងប្រចាំខែ - គណិតវិទ្យា ថ្នាក់ទី ១០</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Battambang:wght@400;700&family=Kantumruy+Pro:wght@400;600;700;800&family=Moul&display=swap" rel="stylesheet">
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    body { font-family: 'Kantumruy Pro', sans-serif; }
+    .font-moul { font-family: 'Moul', cursive !important; letter-spacing: normal !important; }
+    .font-battambang { font-family: 'Battambang', cursive, sans-serif !important; letter-spacing: normal !important; }
+    
+    .excel-table th, .excel-table td {
+      border: 1px solid #7f7f7f;
+      padding: 4px 6px;
+    }
+    .bg-excel-header-orange { background-color: #c55a11; }
+    .bg-excel-light-cream { background-color: #fff2cc; }
+    
+    .touch-scroll { -webkit-overflow-scrolling: touch; }
+
+    @media print {
+      @page { size: A4 landscape; margin: 5mm; }
+      body * { visibility: hidden; }
+      #printableArea, #printableArea * { visibility: visible; }
+      #printableArea { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; }
+      .action-col, .no-print { display: none !important; }
+      .font-moul { font-family: 'Moul', cursive !important; }
+      .font-battambang { font-family: 'Battambang', cursive, sans-serif !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-200 min-h-screen text-slate-800 p-2 sm:p-4">
+
+  <!-- Action Bar -->
+  <div class="max-w-6xl mx-auto mb-3 bg-white p-3 sm:p-4 rounded-xl shadow border border-slate-300 no-print space-y-3">
+    <div class="flex flex-wrap justify-between items-center gap-2">
+      <div class="flex items-center gap-2">
+        <span class="text-xl sm:text-2xl">📊</span>
+        <div>
+          <h1 class="font-bold text-xs sm:text-sm text-indigo-900 leading-tight">ប្រព័ន្ធគ្រប់គ្រងពិន្ទុ Excel គណិតវិទ្យា ថ្នាក់ទី ១០ សាខាស្វាយប៉ាក់</h1>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] bg-indigo-50 text-indigo-800 font-bold px-2 py-1 rounded border border-indigo-200">
+          👤 {{ session.get('fullname', 'លោកគ្រូ') }}
+        </span>
+        <a href="/logout" class="bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold shadow flex items-center gap-1">
+          🚪 Logout
+        </a>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 pt-1 border-t border-slate-100">
+      <!-- ប៊ូតុង Export PDF ថ្មី -->
+      <button onclick="exportToPDF()" id="btnExportPDF" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow flex items-center justify-center gap-1 transition">
+        📄 Export PDF
+      </button>
+
+      <a href="/export/excel" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow flex items-center justify-center gap-1 text-center">
+        📥 Export Excel (.xlsx)
+      </a>
+
+      <button onclick="openSettingsModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow flex items-center justify-center gap-1">
+        ⚙️ កែប្រែព័ត៌មាន
+      </button>
+
+      <button onclick="openAddModal()" class="bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow flex items-center justify-center gap-1">
+        + បញ្ចូលសិស្ស
+      </button>
+      
+      <button onclick="window.print()" class="hidden sm:flex bg-slate-700 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold shadow items-center justify-center gap-1">
+        🖨️ Print
+      </button>
+    </div>
+  </div>
+
+  <!-- Search Bar -->
+  <div class="max-w-6xl mx-auto mb-3 bg-white p-3 rounded-xl shadow border border-slate-300 flex flex-col sm:flex-row justify-between items-center gap-2 no-print">
+    <div class="relative w-full sm:w-72">
+      <input id="searchInput" type="text" placeholder="ស្វែងរកឈ្មោះសិស្ស..."
+             class="w-full pl-8 pr-3 py-1.5 border rounded-lg text-xs focus:ring-2 focus:ring-indigo-400">
+      <span class="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+    </div>
+    <span class="text-[11px] text-slate-500 font-medium text-center sm:text-right">ចុចលើប៊ូតុង <strong>«📝»</strong> លើសិស្សដើម្បីកែប្រែពិន្ទុ</span>
+  </div>
+
+  <!-- ==================== Printable Sheet (ទំហំ 1000px ពេញលេញ មិនកាត់ដាច់ជ្រុងឆ្វេង) ==================== -->
+  <div class="max-w-6xl mx-auto overflow-x-auto touch-scroll rounded-2xl shadow-xl bg-white border border-slate-300" id="printableWrapper">
+    <div id="printableArea" class="w-[1000px] min-w-[1000px] p-6 bg-white space-y-4 mx-auto text-left">
+
+      <!-- Header -->
+      <div class="flex justify-between items-start">
+        <div class="w-1/3 text-left space-y-1">
+          <img src="/static/logo.png" alt="School Logo" class="w-20 h-20 object-contain drop-shadow-sm mb-1" onerror="this.style.display='none'">
+          <p id="dispSchoolName" class="font-bold text-xs sm:text-sm text-slate-900 leading-snug">សាលាបង្វឹក និង បង្រៀនគួរពិសេស តុងប៉</p>
+          <p id="dispSchoolBranch" class="font-bold text-xs text-slate-800">អគារ G   (សាខា ស្វាយប៉ាក)</p>
+        </div>
+
+        <div class="w-2/3 text-center space-y-1">
+          <!-- លុបចោល tracking-wider ដើម្បីកុំឱ្យដាច់ស្រៈអក្សរខ្មែរ -->
+          <h2 class="font-moul text-sm text-slate-900">ព្រះរាជាណាចក្រកម្ពុជា</h2>
+          <h3 class="font-moul text-xs text-slate-800">ជាតិ សាសនា ព្រះមហាក្សត្រ</h3>
+          
+          <!-- រូបភាពក្បាច់គម្ពីរដែលអ្នកបានផ្ដល់ឱ្យ -->
+          <div class="flex justify-center items-center py-1">
+            <img src="/static/divider.png" alt="Royal Ornament" class="h-6 object-contain mx-auto" onerror="this.style.display='none'">
+          </div>
+
+          <div class="pt-0.5 space-y-1">
+            <h4 class="font-moul text-sm text-indigo-950">របាយការណ៍លទ្ធផលប្រឡងប្រចាំខែ</h4>
+            <p id="dispAcademicYear" class="text-xs font-bold text-blue-900 underline">មុខវិជ្ជាសិក្សា៖ គណិតវិទ្យា /កម្រិតថ្នាក់ ១០ /ក្នុងឆ្នាំ២០២៦</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Excel Score Table (100% ដូចរូប Excel ដើម) -->
+      <div class="pt-2">
+        <table class="excel-table w-full text-center border-collapse text-xs">
+          <thead>
+            <!-- Row 9 -->
+            <tr>
+              <th colspan="3" class="bg-excel-header-orange text-white font-bold py-1">របាយការណ៍ពិន្ទុគិតជា %</th>
+              <th class="bg-excel-header-orange text-white font-bold py-1">10%</th>
+              <th class="bg-excel-header-orange text-white font-bold py-1">10%</th>
+              <th class="bg-excel-header-orange text-white font-bold py-1">10%</th>
+              <th class="bg-excel-header-orange text-white font-bold py-1">50%</th>
+              <th class="bg-excel-header-orange text-white font-bold py-1">20%</th>
+              <th class="bg-excel-header-orange text-white font-bold py-1">100%</th>
+              <th rowspan="2" class="bg-excel-light-cream font-bold w-16">មធ្យមភាគ</th>
+              <th rowspan="2" class="bg-excel-light-cream font-bold w-16">ចំណាត់ថ្នាក់</th>
+              <th rowspan="2" class="bg-excel-light-cream font-bold w-14">លទ្ធផល</th>
+              <th rowspan="2" class="bg-excel-light-cream font-bold w-12">និទ្ទេស</th>
+              <th rowspan="2" class="bg-slate-100 font-bold action-col no-print w-16">សកម្មភាព</th>
+            </tr>
+            <!-- Row 10 -->
+            <tr>
+              <th class="bg-excel-light-cream font-bold w-10">ល.រ</th>
+              <th class="bg-excel-light-cream font-bold text-left px-3 min-w-[130px]">ឈ្មោះសិស្ស</th>
+              <th class="bg-excel-light-cream font-bold w-12">ភេទ</th>
+              <th class="bg-excel-light-cream font-bold py-0.5 text-[11px]">ឥរិយាបថ</th>
+              <th class="bg-excel-light-cream font-bold py-0.5 text-[11px]">វត្តមាន</th>
+              <th class="bg-excel-light-cream font-bold py-0.5 text-[11px]">កិច្ចការផ្ទះ</th>
+              <th class="bg-excel-light-cream font-bold py-0.5 text-[11px]">គណិត</th>
+              <th class="bg-excel-light-cream font-bold py-0.5 text-[11px]">ឆ្លើយសំណួរ</th>
+              <th class="bg-excel-light-cream font-bold py-0.5 text-[11px]">ពិន្ទុសរុប</th>
+            </tr>
+          </thead>
+          <tbody id="studentRows"></tbody>
+        </table>
+      </div>
+
+      <!-- Bottom Section: Summary (Left) + Signatures (Right) -->
+      <div class="flex justify-between items-start gap-4 pt-3">
+
+        <!-- Left: គិតជាភេទ -->
+        <div class="flex border-2 border-slate-700 text-xs rounded overflow-hidden shadow-sm">
+          <div class="bg-excel-header-orange text-white font-extrabold px-1.5 flex items-center justify-center border-r border-slate-700" 
+               style="writing-mode: vertical-rl; transform: rotate(180deg);">
+            គិតជាភេទ
+          </div>
+          <div class="w-48 text-center font-bold">
+            <div class="flex border-b border-slate-700">
+              <div class="bg-[#ed7d31] text-white px-2 py-1 w-28 text-left pl-3 border-r border-slate-700">សិស្សសរុបចំនួន</div>
+              <div id="statTotal" class="px-2 py-1 flex-1 bg-white text-slate-900">9 នាក់</div>
+            </div>
+            <div class="flex border-b border-slate-700">
+              <div class="bg-[#385723] text-white px-2 py-1 w-28 text-left pl-3 border-r border-slate-700">ស្រី </div>
+              <div id="statFemale" class="px-2 py-1 flex-1 bg-white text-slate-900">6 នាក់</div>
+            </div>
+            <div class="flex">
+              <div class="bg-[#2f5597] text-white px-2 py-1 w-28 text-left pl-3 border-r border-slate-700">ប្រុស</div>
+              <div id="statMale" class="px-2 py-1 flex-1 bg-white text-slate-900">3 នាក់</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Signatures (គ្មានត្រាក្រហមឡើយ) -->
+        <div class="text-right text-xs space-y-1 leading-relaxed pr-4">
+          <p id="dispLunarDate" class="font-bold text-slate-800">ថ្ងៃ  ពុធ ៤រោច ខែ  ភទ្របទ  ឆ្នាំ  មមី  អដ្ឋសក័ ព.ស.២៥៧០</p>
+          <p id="dispSolarDate" class="font-bold text-slate-800">ភ្នំពេញ ត្រូវនឹងថ្ងៃទី  ៣០ ខែ  កញ្ញា  ឆ្នាំ២០២៦</p>
+          <p class="font-extrabold text-slate-900 pt-1">បានឃើញ និងឯកភាព</p>
+          <p class="font-bold text-slate-800">គណ:គ្រប់គ្រងសាខា ស្វាយប៉ាក</p>
+        </div>
+
+      </div>
+
+      <!-- Teacher Signature (Left) -->
+      <div class="text-left text-xs pt-2 pl-12 space-y-1">
+        <p id="dispTeacherDate" class="font-bold text-slate-800">ថ្ងៃទី ៣០ ខែ កញ្ញា ឆ្នាំ២០២៦</p>
+        <p class="font-bold text-slate-900">គ្រូទទួលបន្ទុកថ្នាក់</p>
+        <div class="h-10"></div>
+        <p id="dispTeacherName" class="font-bold text-slate-900 underline text-sm font-battambang">វ៉ាន់ ជីវ៉ា</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal Settings -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4 no-print touch-scroll">
+    <div class="bg-white rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-3 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm text-slate-800">⚙️ កែប្រែកាលបរិច្ឆេទ & ព័ត៌មានរដ្ឋបាល</h3>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">&times;</button>
+      </div>
+
+      <div class="space-y-2.5">
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">ឈ្មោះគ្រូទទួលបន្ទុកថ្នាក់៖</label>
+          <input type="text" id="setTeacherName" class="w-full border rounded px-3 py-2 font-bold text-indigo-700">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">កាលបរិច្ឆេទគ្រូ (ខាងឆ្វេងក្រោម)៖</label>
+          <input type="text" id="setTeacherDate" class="w-full border rounded px-3 py-2">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">កាលបរិច្ឆេទចន្ទគតិ (ខាងស្តាំ)៖</label>
+          <input type="text" id="setLunarDate" class="w-full border rounded px-3 py-2">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">កាលបរិច្ឆេទសុរិយគតិ (ខាងស្តាំ)៖</label>
+          <input type="text" id="setSolarDate" class="w-full border rounded px-3 py-2">
+        </div>
+        <div>
+          <label class="block font-bold mb-1 text-slate-700">ចំណងជើងកម្រិតថ្នាក់ & ឆ្នាំសិក្សា៖</label>
+          <input type="text" id="setAcademicYear" class="w-full border rounded px-3 py-2">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t">
+        <button onclick="closeSettingsModal()" class="px-4 py-2 bg-slate-100 rounded font-bold">បោះបង់</button>
+        <button onclick="saveSettings()" class="px-5 py-2 bg-indigo-700 text-white rounded font-bold hover:bg-indigo-800 shadow">💾 រក្សាទុក</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Edit Score -->
+  <div id="scoreModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4 no-print touch-scroll">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 sm:p-6 shadow-2xl space-y-3 text-xs max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-sm text-slate-800">📝 កែប្រែពិន្ទុ (Excel Format)</h3>
+        <button onclick="closeScoreModal()" class="text-slate-400 hover:text-slate-600 text-lg font-bold p-1">&times;</button>
+      </div>
+      <p id="modalStudentName" class="font-bold text-indigo-700 font-battambang text-sm"></p>
+
+      <div class="space-y-2 ">
+        <div class="flex justify-between items-center bg-amber-50 p-2 rounded border">
+          <span class="font-medium">១០% ឥរិយាបថ (០-១០)៖</span>
+          <input type="number" id="inpBehavior" min="0" max="10" step="0.5" class="w-20 border rounded text-center font-bold py-1" oninput="calcModalLive()">
+        </div>
+        <div class="flex justify-between items-center bg-amber-50 p-2 rounded border">
+          <span class="font-medium ">១០% វត្តមាន (០-១០)៖</span>
+          <input type="number" id="inpAttendance" min="0" max="10" step="0.5" class="w-20 border rounded text-center font-bold py-1" oninput="calcModalLive()">
+        </div>
+        <div class="flex justify-between items-center bg-amber-50 p-2 rounded border">
+          <span class="font-medium">១០% កិច្ចការផ្ទះ (០-១០)៖</span>
+          <input type="number" id="inpHomework" min="0" max="10" step="0.5" class="w-20 border rounded text-center font-bold py-1" oninput="calcModalLive()">
+        </div>
+        <div class="flex justify-between items-center bg-amber-50 p-2 rounded border">
+          <span class="font-medium">៥០% គណិត (០-៥០)៖</span>
+          <input type="number" id="inpWorksheet" min="0" max="50" step="0.5" class="w-20 border rounded text-center font-bold py-1" oninput="calcModalLive()">
+        </div>
+        <div class="flex justify-between items-center bg-amber-50 p-2 rounded border">
+          <span class="font-medium">២០% ឆ្លើយសំណួរ (០-២០)៖</span>
+          <input type="number" id="inpQuiz" min="0" max="20" step="0.5" class="w-20 border rounded text-center font-bold py-1" oninput="calcModalLive()">
+        </div>
+
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5 flex justify-around text-center">
+          <div><p class="font-bold text-slate-600 text-[11px]">សរុប (100%)</p><p id="modalLiveTotal" class="font-black text-red-600 text-base">0</p></div>
+          <div><p class="font-bold text-slate-600 text-[11px]">មធ្យមភាគ (÷ 6)</p><p id="modalLiveAvg" class="font-black text-blue-700 text-base">0.00</p></div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t">
+        <button onclick="closeScoreModal()" class="px-4 py-2 bg-slate-100 rounded font-bold">បោះបង់</button>
+        <button onclick="saveModalScores()" class="px-5 py-2 bg-indigo-700 text-white rounded font-bold hover:bg-indigo-800 shadow">រក្សាទុក</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Add Student -->
+  <div id="addModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4 no-print touch-scroll">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 sm:p-6 shadow-2xl space-y-3 text-xs">
+      <h3 class="font-bold text-sm text-slate-800 border-b pb-2">+ បញ្ចូលសិស្សថ្មី</h3>
+      <form onsubmit="handleAddStudent(event)" class="space-y-3">
+        <div>
+          <label class="block font-bold mb-1">ឈ្មោះសិស្ស *</label>
+          <input name="name" required class="w-full border rounded px-3 py-2 font-battambang" placeholder="ឧ. សុខ តារា">
+        </div>
+        <div>
+          <label class="block font-bold mb-1">ភេទ</label>
+          <select name="gender" class="w-full border rounded px-3 py-2 bg-white font-bold">
+            <option value="ស្រី">ស្រី</option>
+            <option value="ប្រុស">ប្រុស</option>
+          </select>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 bg-slate-100 rounded font-bold">បោះបង់</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-700 text-white rounded font-bold shadow">រក្សាទុក</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
